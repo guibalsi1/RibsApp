@@ -1,5 +1,7 @@
 package com.gdbsolutions.ribsapp.ui.historico
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -19,12 +21,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -59,9 +66,12 @@ import com.gdbsolutions.ribsapp.ui.theme.RibsAppTheme
 import com.gdbsolutions.ribsapp.utils.converters.toFormattedDateTimeString
 import com.gdbsolutions.ribsapp.utils.converters.toStringBR
 import com.gdbsolutions.ribsapp.utils.html.shareHtmlAsPdf
+import com.gdbsolutions.ribsapp.utils.html.toHtmlCardapio
 import com.gdbsolutions.ribsapp.utils.html.toHtmlOrcamento
+import com.gdbsolutions.ribsapp.utils.html.toHtmlRecibo
 import com.gdbsolutions.ribsapp.utils.webview.rememberWebViewWithHtml
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun HistoricoScreen(modifier: Modifier = Modifier, viewModel: CriarEventoViewModel) {
     val eventos = viewModel.eventosCompleto.observeAsState(emptyList())
@@ -84,6 +94,7 @@ fun HistoricoScreen(modifier: Modifier = Modifier, viewModel: CriarEventoViewMod
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 fun LazyListScope.listaDeEventos(
     eventos: List<EventoCompleto>,
     viewModel: CriarEventoViewModel
@@ -99,6 +110,7 @@ fun LazyListScope.listaDeEventos(
             total = eventos[index].precoTotal.toStringBR(),
             carnes = eventos[index].carnes.map { it.nome },
             entradas = eventos[index].entradas.map { it.nome },
+            pratos = eventos[index].pratos.map { it.nome },
             adicionais = eventos[index].adicionais.map { it.nome },
             eventoCompleto = eventos[index],
             viewModel = viewModel
@@ -106,6 +118,7 @@ fun LazyListScope.listaDeEventos(
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun CardEvento(
     modifier: Modifier = Modifier,
@@ -118,6 +131,7 @@ fun CardEvento(
     carnes: List<String> = emptyList(),
     entradas: List<String> = emptyList(),
     adicionais: List<String> = emptyList(),
+    pratos: List<String> = emptyList(),
     eventoCompleto: EventoCompleto,
     total: String = "R$ 0,00",
     viewModel: CriarEventoViewModel = viewModel()
@@ -126,7 +140,10 @@ fun CardEvento(
     var showListaCarnes by remember { mutableStateOf(false) }
     var showListaEntradas by remember { mutableStateOf(false) }
     var showListaAdicionais by remember { mutableStateOf(false) }
+    var showListaPratos by remember { mutableStateOf(false) }
     var showOrcamentoDialog by remember { mutableStateOf(false) }
+    var showCardapioDialog by remember { mutableStateOf(false) }
+    var showReciboDialog by remember { mutableStateOf(false) }
     var showDeletarDialog by remember { mutableStateOf(false) }
     Card(
         modifier = modifier
@@ -134,6 +151,10 @@ fun CardEvento(
             .padding(16.dp)
             .clickable(onClick = { expended = !expended }),
         shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        )
     ) {
         Column {
             Row(
@@ -185,6 +206,7 @@ fun CardEvento(
                         modifier = modifier.padding(horizontal = 10.dp, vertical = 8.dp)
                     )
                     Linha()
+                    Spacer(modifier = Modifier.height(12.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
@@ -268,6 +290,10 @@ fun CardEvento(
                             Button(
                                 onClick = { showListaCarnes = true },
                                 shape = MaterialTheme.shapes.small,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.background,
+                                    contentColor = MaterialTheme.colorScheme.primary
+                                ),
                                 modifier = modifier.padding(start = 6.dp),
                                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
                             ) {
@@ -287,6 +313,10 @@ fun CardEvento(
                                 onClick = {  showListaEntradas = true },
                                 shape = MaterialTheme.shapes.small,
                                 modifier = modifier.padding(end = 6.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.background,
+                                    contentColor = MaterialTheme.colorScheme.primary
+                                ),
                                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
                             ) {
                                 Text(
@@ -311,6 +341,10 @@ fun CardEvento(
                                 onClick = { showListaAdicionais = true },
                                 shape = MaterialTheme.shapes.small,
                                 modifier = modifier.padding(start = 6.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.background,
+                                    contentColor = MaterialTheme.colorScheme.primary
+                                ),
                                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
                             ) {
                                 Text(
@@ -320,18 +354,40 @@ fun CardEvento(
                         }
                         Column {
                             Text(
-                                text = "Observações:",
+                                text = "Pratos Principais",
                                 style = MaterialTheme.typography.labelMedium,
                                 modifier = modifier.padding(bottom = 4.dp, end = 16.dp),
                                 textAlign = TextAlign.Start
                             )
-                            Text(
-                                text = observacoes,
-                                style = MaterialTheme.typography.bodyMedium,
-                                modifier = modifier.padding(bottom = 4.dp, end = 16.dp),
-                                textAlign = TextAlign.Start
-                            )
+                            Button(
+                                onClick = { showListaPratos = true },
+                                shape = MaterialTheme.shapes.small,
+                                modifier = modifier.padding(end = 6.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.background,
+                                    contentColor = MaterialTheme.colorScheme.primary
+                                ),
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+                            ) {
+                                Text(
+                                    text = "Ver Pratos"
+                                )
+                            }
                         }
+                    }
+                    Column {
+                        Text(
+                            text = "Observações:",
+                            style = MaterialTheme.typography.labelMedium,
+                            modifier = modifier.padding(bottom = 4.dp, end = 16.dp),
+                            textAlign = TextAlign.Start
+                        )
+                        Text(
+                            text = observacoes,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = modifier.padding(bottom = 4.dp, end = 16.dp),
+                            textAlign = TextAlign.Start
+                        )
                     }
                     Text(
                         text = "Total: R$ $total",
@@ -343,7 +399,11 @@ fun CardEvento(
                             bottom = 16.dp
                         )
                     )
-                    ButtonBar(onClickOrcamento = { showOrcamentoDialog = true })
+                    ButtonBar(
+                        onClickOrcamento = { showOrcamentoDialog = true },
+                        onClickCardapio = { showCardapioDialog = true },
+                        onClickRecibo = { showReciboDialog = true }
+                    )
                     Spacer(modifier = modifier.height(16.dp))
                 }
                 }
@@ -370,12 +430,33 @@ fun CardEvento(
                 lista = adicionais
             )
         }
+        if (showListaPratos) {
+            ListDialog(
+                onDismiss = { showListaPratos = false },
+                titulo = "Pratos",
+                lista = pratos
+            )
+        }
         if (showOrcamentoDialog) {
             OrcamentoDialog(
                 eventoCompleto = eventoCompleto,
                 onDismiss = { showOrcamentoDialog = false }
             )
         }
+
+        if (showCardapioDialog) {
+            CardapioDialog(
+                eventoCompleto = eventoCompleto,
+                onDismiss = { showCardapioDialog = false }
+            )
+        }
+        if (showReciboDialog) {
+            ReciboDialog(
+                eventoCompleto = eventoCompleto,
+                onDismiss = { showReciboDialog = false }
+            )
+        }
+
         if (showDeletarDialog) {
             DeletarEventoDialog(
                 onDismiss = { showDeletarDialog = false },
@@ -492,9 +573,10 @@ fun ButtonBar(
 
 @Composable
 fun Linha(modifier: Modifier = Modifier) {
+    val color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
     Canvas(modifier = modifier.fillMaxWidth()) {
         drawLine(
-            color = LightGrey,
+            color = color,
             start = Offset(0f, 0f),
             end = Offset(size.width, 0f),
             strokeWidth = 10f,
@@ -542,71 +624,90 @@ fun ListDialog(
     titulo: String,
     lista: List<String>
 ) {
-    Dialog(
-        onDismissRequest = onDismiss,
-    ) {
+    Dialog(onDismissRequest = onDismiss) {
         Card(
             modifier = modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            shape = MaterialTheme.shapes.medium,
+                .padding(24.dp),
+            shape = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.cardElevation(8.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+            )
         ) {
-            LazyColumn(
+            Column(
                 modifier = modifier
-                    .padding(3.dp)
-                    .fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ){
-                item {
-                    Text(
-                        text = titulo,
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 12.dp)
-                            .align(Alignment.CenterHorizontally)
-                    )
-                    Spacer(modifier = modifier.height(6.dp))
+                    .fillMaxWidth()
+                    .padding(20.dp)
+            ) {
+                Text(
+                    text = titulo,
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp),
+                    textAlign = TextAlign.Center
+                )
+
+                HorizontalDivider(
+                    thickness = 1.dp,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(lista.size) { index ->
+                        Text(
+                            text = "• ${lista[index]}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.fillMaxWidth(),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
                 }
-                items(lista.size) { index ->
-                    Text(
-                        text = lista[index],
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = modifier.padding(6.dp)
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Button(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                     )
-                }
-                item {
-                    Spacer(modifier = modifier.height(16.dp))
-                    IconButton(
-                            onClick = onDismiss,
-                    modifier = modifier
-                        .padding(16.dp)
-                        .fillMaxWidth(),
-                    colors = IconButtonDefaults.iconButtonColors(containerColor = Color.Red)
-                    ) {
+                ) {
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
+                        contentDescription = "Fechar",
+                        modifier = Modifier.padding(end = 8.dp)
                     )
-                }
+                    Text("Fechar")
                 }
             }
-
         }
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun OrcamentoDialog(
     eventoCompleto: EventoCompleto,
     onDismiss: () -> Unit
 ) {
-    val htmlContent = remember(eventoCompleto) {
-        eventoCompleto.toHtmlOrcamento()
-    }
     val context = LocalContext.current
+    val htmlContent = remember(eventoCompleto) {
+        eventoCompleto.toHtmlOrcamento(context = context)
+    }
+
     val webView = rememberWebViewWithHtml(htmlContent)
 
     Dialog(onDismissRequest = onDismiss) {
@@ -646,7 +747,133 @@ fun OrcamentoDialog(
                 Button(
                     onClick = {
                         // Agora passamos a webView existente para a função
-                        shareHtmlAsPdf(context, htmlContent)
+                        shareHtmlAsPdf(context, htmlContent, "orcamento")
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    shape = MaterialTheme.shapes.small,
+                ) {
+                    Text("Compartilhar PDF")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun CardapioDialog(
+    eventoCompleto: EventoCompleto,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    val htmlContent = remember(eventoCompleto) {
+        eventoCompleto.toHtmlCardapio(context = context)
+    }
+
+    val webView = rememberWebViewWithHtml(htmlContent)
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.9f)
+                .padding(16.dp),
+            shape = MaterialTheme.shapes.medium,
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Visualizar Cardápio",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
+                    IconButton(onClick = onDismiss) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Fechar"
+                        )
+                    }
+                }
+                AndroidView(
+                    factory = { webView },
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 8.dp)
+                )
+                Button(
+                    onClick = {
+                        // Agora passamos a webView existente para a função
+                        shareHtmlAsPdf(context, htmlContent, "cardapio")
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    shape = MaterialTheme.shapes.small,
+                ) {
+                    Text("Compartilhar PDF")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ReciboDialog(
+    eventoCompleto: EventoCompleto,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    val htmlContent = remember(eventoCompleto) {
+        eventoCompleto.toHtmlRecibo(context = context)
+    }
+
+    val webView = rememberWebViewWithHtml(htmlContent)
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.9f)
+                .padding(16.dp),
+            shape = MaterialTheme.shapes.medium,
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Visualizar Recibo",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
+                    IconButton(onClick = onDismiss) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Fechar"
+                        )
+                    }
+                }
+                AndroidView(
+                    factory = { webView },
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 8.dp)
+                )
+                Button(
+                    onClick = {
+                        // Agora passamos a webView existente para a função
+                        shareHtmlAsPdf(context, htmlContent, "recibo")
                     },
                     modifier = Modifier
                         .fillMaxWidth()

@@ -81,3 +81,9 @@ fun Long.toFormattedDateTimeString(): String {
     val format = java.text.SimpleDateFormat("dd/MM/yyyy 'às' HH:mm")
     return format.format(date)
 }
+
+fun Long.toFormattedDateTimeStringFile(): String {
+    val date = java.util.Date(this)
+    val format = java.text.SimpleDateFormat("ddMMyyyyHHmm")
+    return format.format(date)
+}

@@ -6,6 +6,7 @@ import com.gdbsolutions.ribsapp.data.local.dao.AdicionaisDAO
 import com.gdbsolutions.ribsapp.data.local.dao.CarnesDAO
 import com.gdbsolutions.ribsapp.data.local.dao.EntradasDAO
 import com.gdbsolutions.ribsapp.data.local.dao.EventosDAO
+import com.gdbsolutions.ribsapp.data.local.dao.PratosDAO
 import com.gdbsolutions.ribsapp.data.local.database.AppDatabase
 import com.gdbsolutions.ribsapp.data.local.entity.AdicionaisEventoCrossRef
 import com.gdbsolutions.ribsapp.data.local.entity.Adicional
@@ -15,6 +16,8 @@ import com.gdbsolutions.ribsapp.data.local.entity.Entradas
 import com.gdbsolutions.ribsapp.data.local.entity.EntradasEventoCrossRef
 import com.gdbsolutions.ribsapp.data.local.entity.Evento
 import com.gdbsolutions.ribsapp.data.local.entity.EventoCompleto
+import com.gdbsolutions.ribsapp.data.local.entity.Prato
+import com.gdbsolutions.ribsapp.data.local.entity.PratoEventoCrossRef
 import kotlinx.coroutines.flow.Flow
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -25,10 +28,12 @@ class EventoRepository(application: Application) {
     private val carnesDao: CarnesDAO
     private val entradasDao: EntradasDAO
     private val adicionaisDao: AdicionaisDAO
+    private val pratosDao: PratosDAO
 
     val allEventos: Flow<List<Evento>>
     val allCarnes: Flow<List<Carnes>>
     val allEntradas: Flow<List<Entradas>>
+    val allPratos: Flow<List<Prato>>
     val allAdicionais: Flow<List<Adicional>>
     val allEventosCompleto: Flow<List<EventoCompleto>>
 
@@ -40,10 +45,12 @@ class EventoRepository(application: Application) {
         carnesDao = db.carnesDao()
         entradasDao = db.entradasDao()
         adicionaisDao = db.adicionaisDao()
+        pratosDao = db.pratosDao()
 
         allEventos = eventosDao.getAllEventos()
         allCarnes = carnesDao.getAllCarnes()
         allEntradas = entradasDao.getAllEntradas()
+        allPratos = pratosDao.getAllPratos()
         allAdicionais = adicionaisDao.getAllAdicionais()
         allEventosCompleto = eventosDao.getAllEventosCompleto()
     }
@@ -91,6 +98,11 @@ class EventoRepository(application: Application) {
             adicionaisDao.insertAdicional(adicional)
         }
     }
+    fun insertPrato(prato: Prato) {
+        executor.execute {
+            pratosDao.insertPrato(prato)
+        }
+    }
 
     fun updateEntrada(entrada: Entradas) {
         executor.execute {
@@ -107,6 +119,11 @@ class EventoRepository(application: Application) {
     fun updateAdicional(adicional: Adicional) {
         executor.execute {
             adicionaisDao.updateAdicional(adicional)
+        }
+    }
+    fun updatePrato(prato: Prato) {
+        executor.execute {
+            pratosDao.updatePrato(prato)
         }
     }
 
@@ -128,6 +145,12 @@ class EventoRepository(application: Application) {
         executor.execute {
             val crossRef = AdicionaisEventoCrossRef(adicionalId, eventoId)
             eventosDao.insertAdicionalEvento(crossRef)
+        }
+    }
+    fun addPratoToEvento(eventoId: Long, pratoId: Long) {
+        executor.execute {
+            val crossRef = PratoEventoCrossRef(pratoId, eventoId)
+            eventosDao.insertPratoEvento(crossRef)
         }
     }
 }

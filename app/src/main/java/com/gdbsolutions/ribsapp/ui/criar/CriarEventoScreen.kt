@@ -43,6 +43,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -72,6 +73,7 @@ import com.gdbsolutions.ribsapp.data.local.entity.Adicional
 import com.gdbsolutions.ribsapp.data.local.entity.Carnes
 import com.gdbsolutions.ribsapp.data.local.entity.Entradas
 import com.gdbsolutions.ribsapp.data.local.entity.Evento
+import com.gdbsolutions.ribsapp.data.local.entity.Prato
 import com.gdbsolutions.ribsapp.ui.theme.LightGrey
 import com.gdbsolutions.ribsapp.ui.theme.RibsAppTheme
 import com.gdbsolutions.ribsapp.utils.converters.maskedTextToBigDecimal
@@ -86,11 +88,13 @@ import com.gdbsolutions.ribsapp.utils.converters.toStringBR
 fun CriarEventoScreen(modifier: Modifier = Modifier, viewModel: CriarEventoViewModel) {
     val carnes = viewModel.carnes.observeAsState(emptyList())
     val entradas = viewModel.entradas.observeAsState(emptyList())
+    val pratos = viewModel.pratos.observeAsState(emptyList())
     val adicionais = viewModel.adicionais.observeAsState(emptyList())
 
     LaunchedEffect(Unit) {
         viewModel.carregarEntradas()
         viewModel.carregarCarnes()
+        viewModel.carregarPratos()
         viewModel.carregarAdicionais()
     }
 
@@ -106,6 +110,7 @@ fun CriarEventoScreen(modifier: Modifier = Modifier, viewModel: CriarEventoViewM
     var showDatePicker by remember { mutableStateOf(false) }
     var showAdicionarEntrada by remember { mutableStateOf(false) }
     var showAdicionarCarne by remember { mutableStateOf(false) }
+    var showAdicionarPrato by remember { mutableStateOf(false) }
     var showAdicionarAdicional by remember { mutableStateOf(false) }
     var showEventoCriado by remember { mutableStateOf(false) }
     val opcoes = rememberSaveable(stateSaver = OpcoesSaver) {
@@ -208,14 +213,41 @@ fun CriarEventoScreen(modifier: Modifier = Modifier, viewModel: CriarEventoViewM
         )
         item {
             Spacer(modifier = Modifier.height(12.dp))
-            BotaoAdicionar(texto = "Carne",
+            BotaoAdicionar(
+                texto = "Carne",
                 showAdicionarDialog = showAdicionarCarne,
                 onConfirmar = { nome, descricao ->
                     viewModel.insertCarne(Carnes(nome = nome, descricao = descricao))
                     viewModel.carregarCarnes()
                 }
             )
+            Spacer(modifier = Modifier.height(20.dp))
 
+            SwitchPane(texto = "Pratos Principais",
+                opt = opcoes.value.pratos,
+                onCheckedChange = { novoValor ->
+                    opcoes.value = opcoes.value.copy(pratos = novoValor)
+                    viewModel.alternarAtivacaoGeralPratos(novoValor)
+                }
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+        listaDePratos(
+            pratos = pratos.value,
+            isSelected = opcoes.value.pratos,
+            aoMudarStatus = {index, ativo ->
+                viewModel.atualizarStatusPrato(index, pratos.value, ativo)}
+        )
+        item {
+            Spacer(modifier = Modifier.height(12.dp))
+            BotaoAdicionar(
+                texto = "Prato",
+                showAdicionarDialog = showAdicionarPrato,
+                onConfirmar = { nome, descricao ->
+                    viewModel.insertPrato(Prato(nome = nome, descricao = descricao))
+                    viewModel.carregarPratos()
+                }
+            )
             Spacer(modifier = Modifier.height(20.dp))
             Titulo(texto = "Precificação")
 
@@ -294,22 +326,21 @@ fun CriarEventoScreen(modifier: Modifier = Modifier, viewModel: CriarEventoViewM
                 onClick = {
                     val numPessoasLong = if (numPessoas.isNotBlank()) numPessoas.toLong() else 0L
                     val kmsRodadosLong = if (kmsRodados.isNotBlank()) kmsRodados.toLong() else 0L
-                    Log.d("TESTE", "Pessoa: ${precoPorPessoa.maskedTextToBigDecimal()} * $numPessoas")
-                    Log.d("TESTE", "Km: ${precoPorKm.maskedTextToBigDecimal()} * $kmsRodados")
-                        viewModel.criarEventoComRelacoes(
-                            Evento(
-                                nomeEmpresa = nomeEmpresa.ifBlank { null },
-                                dataEvento = dataEvento.ifBlank { null },
-                                localEvento = localEvento.ifBlank { null },
-                                numPessoas = numPessoasLong,
-                                precoPorPessoa = precoPorPessoa.maskedTextToBigDecimal(),
-                                kmsRodados = kmsRodadosLong,
-                                precoPorKm = precoPorKm.maskedTextToBigDecimal(),
-                                observacoes = observacoes
-                            ),
-                            carnes.value.filter { it.ativo },
-                            entradas.value.filter { it.ativo },
-                            adicionais.value.filter { it.ativo }
+                    viewModel.criarEventoComRelacoes(
+                        Evento(
+                            nomeEmpresa = nomeEmpresa.ifBlank { null },
+                            dataEvento = dataEvento.ifBlank { null },
+                            localEvento = localEvento.ifBlank { null },
+                            numPessoas = numPessoasLong,
+                            precoPorPessoa = precoPorPessoa.maskedTextToBigDecimal(),
+                            kmsRodados = kmsRodadosLong,
+                            precoPorKm = precoPorKm.maskedTextToBigDecimal(),
+                            observacoes = observacoes
+                        ),
+                        carnes.value.filter { it.ativo },
+                        entradas.value.filter { it.ativo },
+                        adicionais.value.filter { it.ativo },
+                        pratos.value.filter { it.ativo }
                         )
                     showEventoCriado = true
                 },
@@ -367,6 +398,26 @@ fun LazyListScope.listaDeCarnes(
         CardOpcao(nome = carnes[index].nome,
             descricao = carnes[index].descricao,
             checked = carnes[index].ativo,
+            onCheckedChange = { novoValor ->
+                if (isSelected) {
+                    aoMudarStatus(index, novoValor)
+                }
+
+            },
+            enabled = isSelected
+        )
+    }
+}
+
+fun LazyListScope.listaDePratos(
+    pratos: List<Prato>,
+    aoMudarStatus: (index: Int, ativo: Boolean) -> Unit,
+    isSelected: Boolean
+) {
+    items(pratos.size) { index ->
+        CardOpcao(nome = pratos[index].nome,
+            descricao = pratos[index].descricao,
+            checked = pratos[index].ativo,
             onCheckedChange = { novoValor ->
                 if (isSelected) {
                     aoMudarStatus(index, novoValor)
@@ -481,7 +532,7 @@ fun CardOpcao(
     val backgroundColor = if (checked)
         MaterialTheme.colorScheme.surface
     else
-        MaterialTheme.colorScheme.surfaceVariant
+        MaterialTheme.colorScheme.background
     val textColor = if (checked)
         MaterialTheme.colorScheme.background
     else
@@ -869,6 +920,7 @@ data class Opcoes(
     var local: Boolean = true,
     var entradas: Boolean = true,
     var carnes: Boolean = true,
+    var pratos: Boolean = true,
     var pessoas: Boolean = true,
     var km: Boolean = true,
     var adicionais: Boolean = true,
@@ -882,6 +934,7 @@ val OpcoesSaver: Saver<Opcoes, *> = mapSaver(
             "local" to it.local,
             "entradas" to it.entradas,
             "carnes" to it.carnes,
+            "pratos" to it.pratos,
             "pessoas" to it.pessoas,
             "km" to it.km,
             "adicionais" to it.adicionais,
@@ -895,6 +948,7 @@ val OpcoesSaver: Saver<Opcoes, *> = mapSaver(
             local = it["local"] as Boolean,
             entradas = it["entradas"] as Boolean,
             carnes = it["carnes"] as Boolean,
+            pratos = it["pratos"] as Boolean,
             pessoas = it["pessoas"] as Boolean,
             km = it["km"] as Boolean,
             adicionais = it["adicionais"] as Boolean,

@@ -13,6 +13,7 @@ import com.gdbsolutions.ribsapp.data.local.entity.Carnes
 import com.gdbsolutions.ribsapp.data.local.entity.Entradas
 import com.gdbsolutions.ribsapp.data.local.entity.Evento
 import com.gdbsolutions.ribsapp.data.local.entity.EventoCompleto
+import com.gdbsolutions.ribsapp.data.local.entity.Prato
 import com.gdbsolutions.ribsapp.data.repository.EventoRepository
 import kotlinx.coroutines.launch
 
@@ -20,6 +21,7 @@ class CriarEventoViewModel(application: Application): AndroidViewModel(applicati
     private var switchEntradas = true
     private var switchCarnes = true
     private var switchAdicionais = true
+    private var switchPratos = true
     private val repository = EventoRepository(application)
 
     private val _carnes = MutableLiveData<List<Carnes>>()
@@ -39,6 +41,16 @@ class CriarEventoViewModel(application: Application): AndroidViewModel(applicati
             _entradas.value = lista
         }
     }
+
+    private val _pratos = MutableLiveData<List<Prato>>()
+    val pratos: LiveData<List<Prato>> = _pratos
+    fun carregarPratos() {
+        viewModelScope.launch {
+            val lista = repository.allPratos.firstOrNull() ?: emptyList()
+            _pratos.value = lista
+        }
+    }
+
     private val _adicionais = MutableLiveData<List<Adicional>>()
     val adicionais: LiveData<List<Adicional>> = _adicionais
     fun carregarAdicionais() {
@@ -70,11 +82,17 @@ class CriarEventoViewModel(application: Application): AndroidViewModel(applicati
         switchAdicionais = novoValor
         _adicionais.value = _adicionais.value?.map { it.copy(ativo = novoValor) }
     }
+
+    fun alternarAtivacaoGeralPratos(novoValor: Boolean) {
+        switchPratos = novoValor
+        _pratos.value = _pratos.value?.map { it.copy(ativo = novoValor) }
+    }
     fun criarEventoComRelacoes(
         evento: Evento,
         carnesSelecionadas: List<Carnes>,
         entradasSelecionadas: List<Entradas>,
-        adicionaisSelecionados: List<Adicional>
+        adicionaisSelecionados: List<Adicional>,
+        pratosSelecionados: List<Prato>
     ) {
         repository.insertEvento(evento) { eventoId ->
             carnesSelecionadas.forEach { carne ->
@@ -85,6 +103,9 @@ class CriarEventoViewModel(application: Application): AndroidViewModel(applicati
             }
             adicionaisSelecionados.forEach { adicional ->
                 repository.addAdicionalToEvento(eventoId, adicional.id)
+            }
+            pratosSelecionados.forEach { prato ->
+                repository.addPratoToEvento(eventoId, prato.id)
             }
         }
     }
@@ -99,6 +120,8 @@ class CriarEventoViewModel(application: Application): AndroidViewModel(applicati
     fun insertCarne(carne: Carnes) = repository.insertCarne(carne)
     fun insertEntrada(entrada: Entradas) = repository.insertEntrada(entrada)
     fun insertAdicional(adicional: Adicional) = repository.insertAdicional(adicional)
+
+    fun insertPrato(prato: Prato) = repository.insertPrato(prato)
 
     fun atualizarStatusEntrada(index: Int, entradasAtuais: List<Entradas>, novoStatus: Boolean) {
         val novaLista = entradasAtuais.toMutableList()
@@ -116,6 +139,12 @@ class CriarEventoViewModel(application: Application): AndroidViewModel(applicati
         viewModelScope.launch {
             repository.updateCarne(novaLista[index])
         }
+    }
+
+    fun atualizarStatusPrato(index: Int, pratosAtuais: List<Prato>, novoStatus: Boolean) {
+        val novaLista = pratosAtuais.toMutableList()
+        novaLista[index] = novaLista[index].copy(ativo = novoStatus)
+        _pratos.value = novaLista
     }
 
     fun atualizarStatusAdicional(index: Int, adicionaisAtuais: List<Adicional>, novoStatus: Boolean) {

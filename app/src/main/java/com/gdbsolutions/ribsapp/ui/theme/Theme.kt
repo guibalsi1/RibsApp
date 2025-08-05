@@ -17,8 +17,11 @@ private val DarkColorScheme = darkColorScheme(
     tertiary = OffWhite,
     background = BlackCarbon,
     outline = LightGrey,
-    surface = superficieColorVariance,
-    surfaceVariant = superficieColor
+    surface = superficieColorDark,
+    onSurface = onSuperficiesColorDark,
+    surfaceVariant = superficieColorVarianceDark,
+    onSurfaceVariant = onSuperficeColorVarianceDark,
+    surfaceContainerHighest = MediumGrey
 )
 
 private val LightColorScheme = lightColorScheme(
@@ -27,8 +30,11 @@ private val LightColorScheme = lightColorScheme(
     tertiary = LightGrey,
     background = OffWhite,
     outline = DarkGrey,
-    surface =superficieColor,
-    surfaceVariant = superficieColorVariance,
+    surface =superficieColorLight,
+    onSurface = onSuperficiesColorLight,
+    surfaceVariant = superficeColorVarianceLight,
+    onSurfaceVariant = onSuperficeColorVarianceLight,
+    surfaceContainerHighest = DarkGrey
 )
 
 @Composable

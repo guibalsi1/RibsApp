@@ -49,6 +49,17 @@ data class EventoCompleto (
     val carnes: List<Carnes> = emptyList(),
     @Relation(
         parentColumn = "id",
+        entity = Prato::class,
+        entityColumn = "id",
+        associateBy = Junction(
+            value = PratoEventoCrossRef::class,
+            parentColumn = "eventoId",
+            entityColumn = "pratoId"
+        )
+        )
+    val pratos: List<Prato> = emptyList(),
+    @Relation(
+        parentColumn = "id",
         entity = Adicional::class,
         entityColumn = "id",
         associateBy = Junction(

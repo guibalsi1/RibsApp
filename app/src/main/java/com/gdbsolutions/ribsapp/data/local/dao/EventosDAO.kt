@@ -13,6 +13,7 @@ import com.gdbsolutions.ribsapp.data.local.entity.CarnesEventoCrossRef
 import com.gdbsolutions.ribsapp.data.local.entity.EntradasEventoCrossRef
 import com.gdbsolutions.ribsapp.data.local.entity.Evento
 import com.gdbsolutions.ribsapp.data.local.entity.EventoCompleto
+import com.gdbsolutions.ribsapp.data.local.entity.PratoEventoCrossRef
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -30,6 +31,9 @@ interface EventosDAO {
     fun insertEntradaEvento(entradaEventoCrossRef: EntradasEventoCrossRef)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insertPratoEvento(pratoEventoCrossRef: PratoEventoCrossRef)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insertAdicionalEvento(adicionalEventoCrossRef: AdicionaisEventoCrossRef)
 
     @Query("DELETE FROM CarnesEventoCrossRef WHERE eventoId = :eventoId")
@@ -40,6 +44,9 @@ interface EventosDAO {
 
     @Query("DELETE FROM AdicionaisEventoCrossRef WHERE eventoId = :eventoId")
     fun deleteAdicionaisDoEvento(eventoId: Long)
+
+    @Query("DELETE FROM PratoEventoCrossRef WHERE eventoId = :eventoId")
+    fun deletePratosDoEvento(eventoId: Long)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insertEvento(evento: Evento): Long
